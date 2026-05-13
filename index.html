@@ -6,136 +6,66 @@
   <title>KOF 2002 — theyessus</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
 
   <style>
     :root {
-      --bg: #0E0F13; --surface: #16181F; --surface2: #1E2029;
-      --border: rgba(255,255,255,0.07); --accent: #E8A24A;
-      --text: #E8E6DF; --muted: #6B6A65; --radius: 14px;
+      --bg: #0E0F13; --accent: #E8A24A; --text: #E8E6DF;
     }
     body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; overflow: hidden; }
     
-    #splash { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.6s; }
+    #splash { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.8s; }
     #splash.hidden { opacity: 0; visibility: hidden; }
-    .loader-content { width: 300px; text-align: center; }
-    #splash-title { font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; color: var(--accent); margin: 0; }
+    #splash-title { font-family: 'Bebas Neue', sans-serif; font-size: 4rem; color: var(--accent); margin: 0; }
+    .loader { width: 40px; height: 40px; border: 3px solid rgba(232,162,74,0.2); border-top: 3px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 20px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     
-    .progress-track { width: 100%; height: 8px; background: var(--surface2); border-radius: 10px; overflow: hidden; margin: 20px 0 10px 0; }
-    #dl-bar { width: 0%; height: 100%; background: var(--accent); transition: width 0.2s; }
-    #dl-label { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: var(--accent); }
-
-    #emulator-wrap { width: 100vw; height: 100vh; background: #000; }
-    #game { width: 100%; height: 100%; }
+    #game-container { width: 100vw; height: 100vh; background: #000; }
   </style>
 </head>
 <body>
 
   <div id="splash">
-    <div class="loader-content">
-      <h1 id="splash-title">KOF 2002</h1>
-      <div class="progress-track"><div id="dl-bar"></div></div>
-      <div id="dl-label">ESPERANDO...</div>
-      <p id="status-text" style="font-size:0.75rem; color:var(--muted); letter-spacing:1px;">CONECTANDO...</p>
-    </div>
+    <h1 id="splash-title">KOF 2002</h1>
+    <div class="loader"></div>
+    <p id="status">CARGANDO MOTOR...</p>
   </div>
 
-  <div id="emulator-wrap"><div id="game"></div></div>
+  <div id="game-container">
+    <div id="game"></div>
+  </div>
 
-  <script type="module">
+  <script>
+    // URL DIRECTA A TU RELEASE
     const ROM_URL = 'https://github.com/theyessus/emulator/releases/download/v1.0/kof2002.zip';
     const BIOS_URL = 'https://theyessus.github.io/emulator/neogeo.zip';
-    const PROXY = 'https://api.allorigins.win/raw?url=';
 
-    const CacheDB = {
-      async _db() {
-        return new Promise(res => {
-          const req = indexedDB.open('KOF_ULTIMATE_CACHE', 1);
-          req.onupgradeneeded = () => req.result.createObjectStore('files');
-          req.onsuccess = () => res(req.result);
-        });
-      },
-      async get(key) {
-        try {
-          const db = await this._db();
-          return new Promise(res => {
-            const r = db.transaction('files').objectStore('files').get(key);
-            r.onsuccess = () => res(r.result);
-            r.onerror = () => res(null);
-          });
-        } catch { return null; }
-      },
-      async set(key, val) {
-        try {
-          const db = await this._db();
-          db.transaction('files', 'readwrite').objectStore('files').put(val, key);
-        } catch (e) {}
+    window.EJS_player = '#game';
+    window.EJS_core = 'fbneo'; // Motor más estable
+    window.EJS_gameUrl = ROM_URL;
+    window.EJS_biosUrl = BIOS_URL;
+    window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+    window.EJS_startOnLoaded = true;
+    window.EJS_DEBUG = false; // Cambia a true si quieres ver errores técnicos en consola
+
+    // Cargamos el motor de EmulatorJS
+    const script = document.createElement('script');
+    script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+    document.body.appendChild(script);
+
+    // Quitamos la pantalla de carga después de que el motor inicie
+    window.addEventListener('message', function(e) {
+      if (e.data === 'emulatorjs-game-loaded' || e.data === 'emulatorjs-core-loaded') {
+        setTimeout(() => {
+          document.getElementById('splash').classList.add('hidden');
+        }, 2000);
       }
-    };
+    });
 
-    async function download(url, label) {
-      const proxied = url.includes('github.com') ? PROXY + encodeURIComponent(url) : url;
-      try {
-        const resp = await fetch(proxied);
-        if (!resp.ok) throw new Error();
-        
-        const reader = resp.body.getReader();
-        const total = +resp.headers.get('Content-Length') || 86000000;
-        let loaded = 0;
-        let chunks = [];
-
-        while(true) {
-          const {done, value} = await reader.read();
-          if (done) break;
-          chunks.push(value);
-          loaded += value.length;
-          const pct = Math.min(Math.round((loaded / total) * 100), 99);
-          document.getElementById('dl-bar').style.width = pct + '%';
-          document.getElementById('dl-label').textContent = pct + '%';
-          document.getElementById('status-text').textContent = `DESCARGANDO ${label}`;
-        }
-        return new Blob(chunks);
-      } catch (e) {
-        console.warn("Fallo descarga asistida, el emulador intentará descarga directa.");
-        return url; // Retorna la URL para que el emulador la maneje
-      }
-    }
-
-    async function start(rom, bios) {
-      window.EJS_player = '#game';
-      window.EJS_core = 'fbneo'; // Mismo core de tu captura
-      window.EJS_gameUrl = (rom instanceof Blob) ? URL.createObjectURL(rom) : rom;
-      window.EJS_biosUrl = (bios instanceof Blob) ? URL.createObjectURL(bios) : bios;
-      window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-      window.EJS_startOnLoaded = true;
-
-      const loader = document.createElement('script');
-      loader.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
-      document.body.appendChild(loader);
-      
-      // Ocultar splash automáticamente después de un tiempo prudente
-      setTimeout(() => document.getElementById('splash').classList.add('hidden'), 8000);
-    }
-
-    (async () => {
-      let rom = await CacheDB.get('kof');
-      let bios = await CacheDB.get('neo');
-
-      if (!rom || !bios) {
-        bios = await download(BIOS_URL, 'SISTEMA');
-        rom = await download(ROM_URL, 'JUEGO');
-        
-        if (rom instanceof Blob && bios instanceof Blob) {
-          await CacheDB.set('kof', rom);
-          await CacheDB.set('neo', bios);
-        }
-      }
-
-      document.getElementById('dl-bar').style.width = '100%';
-      document.getElementById('dl-label').textContent = '100%';
-      document.getElementById('status-text').textContent = "INICIANDO MOTOR...";
-      start(rom, bios);
-    })();
+    // Fallback: Si en 15 segundos no ha cargado, quitamos el splash igual
+    setTimeout(() => {
+        document.getElementById('splash').classList.add('hidden');
+    }, 15000);
   </script>
 </body>
 </html>
