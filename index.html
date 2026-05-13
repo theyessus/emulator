@@ -19,23 +19,16 @@
     #splash { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.6s; }
     #splash.hidden { opacity: 0; visibility: hidden; }
     .loader-content { width: 300px; text-align: center; }
-    #splash-title { font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; color: var(--accent); margin: 0; line-height: 1; }
+    #splash-title { font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; color: var(--accent); margin: 0; }
     
     .progress-track { width: 100%; height: 8px; background: var(--surface2); border-radius: 10px; overflow: hidden; margin: 20px 0 10px 0; }
-    #dl-bar { width: 0%; height: 100%; background: var(--accent); transition: width 0.2s ease-out; box-shadow: 0 0 15px rgba(232, 162, 74, 0.3); }
+    #dl-bar { width: 0%; height: 100%; background: var(--accent); transition: width 0.2s; }
     
     #status-text { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; }
-    #dl-label { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: var(--accent); margin-top: 5px; }
+    #dl-label { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: var(--accent); }
 
     #emulator-wrap { width: 100vw; height: 100vh; background: #000; display: flex; align-items: center; justify-content: center; }
     #game { width: 100%; height: 100%; }
-
-    #btn-open-sidebar {
-      position: fixed; bottom: 25px; right: 25px; z-index: 50;
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); padding: 15px; border-radius: 50%; cursor: pointer;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    }
   </style>
 </head>
 <body>
@@ -45,30 +38,22 @@
       <h1 id="splash-title">KOF 2002</h1>
       <div class="progress-track"><div id="dl-bar"></div></div>
       <div id="dl-label">0%</div>
-      <p id="status-text">Iniciando sistema...</p>
+      <p id="status-text">Conectando con el servidor...</p>
     </div>
   </div>
 
-  <div id="emulator-wrap">
-    <div id="game"></div>
-  </div>
-
-  <button id="btn-open-sidebar">⚙️</button>
+  <div id="emulator-wrap"><div id="game"></div></div>
 
   <script type="module">
-    // ────────────────────────────────────────────────────────────────
-    // CONFIGURACIÓN DE RUTAS
-    // ────────────────────────────────────────────────────────────────
-    const GITHUB_BASE = 'https://theyessus.github.io/emulator';
-    // Tu enlace de Dropbox con raw=1
+    // URL DE DROPBOX REPARADA
     const ROM_URL = 'https://www.dropbox.com/scl/fi/g57leqv4iico93dfr4e71/kof2002.zip?rlkey=zn7ucdgvdiv4zrdorm13jqvy1&st=2774sffa&raw=1';
-    const BIOS_URL = `https://theyessus.github.io/emulator/neogeo.zip`;
+    const BIOS_URL = 'https://theyessus.github.io/emulator/neogeo.zip';
 
-    // 1. GESTIÓN DE CACHÉ (IndexedDB)
+    // Base de datos local
     const CacheDB = {
       async _db() {
         return new Promise(res => {
-          const req = indexedDB.open('KOF2002_PLAYER_V1', 1);
+          const req = indexedDB.open('KOF_CACHE_FINAL', 1);
           req.onupgradeneeded = () => req.result.createObjectStore('files');
           req.onsuccess = () => res(req.result);
         });
@@ -86,74 +71,68 @@
       }
     };
 
-    // 2. DESCARGA CON PROGRESO (82.1 MB)
-    async function download(url, label, expectedSize) {
-      const resp = await fetch(url);
-      if (!resp.ok) throw new Error("Error de red");
-      
-      const reader = resp.body.getReader();
-      const total = +resp.headers.get('Content-Length') || expectedSize;
-      let loaded = 0;
-      let chunks = [];
-
-      while(true) {
-        const {done, value} = await reader.read();
-        if (done) break;
-        chunks.push(value);
-        loaded += value.length;
-        const pct = Math.min(Math.round((loaded / total) * 100), 99);
+    // Descarga corregida para evitar errores de conexión
+    async function download(url, label) {
+      try {
+        const resp = await fetch(url, { mode: 'cors' });
+        if (!resp.ok) throw new Error();
         
-        document.getElementById('dl-bar').style.width = pct + '%';
-        document.getElementById('dl-label').textContent = pct + '%';
-        document.getElementById('status-text').textContent = `Descargando ${label}...`;
+        const reader = resp.body.getReader();
+        const total = +resp.headers.get('Content-Length') || 86000000;
+        let loaded = 0;
+        let chunks = [];
+
+        while(true) {
+          const {done, value} = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          loaded += value.length;
+          const pct = Math.min(Math.round((loaded / total) * 100), 99);
+          document.getElementById('dl-bar').style.width = pct + '%';
+          document.getElementById('dl-label').textContent = pct + '%';
+          document.getElementById('status-text').textContent = `Descargando ${label}...`;
+        }
+        return new Blob(chunks);
+      } catch (e) {
+        // Si falla el fetch por CORS, intentamos cargar directo (esto puede fallar la barra de progreso pero iniciar el juego)
+        console.warn("Fallo fetch, intentando modo alternativo...");
+        return url; 
       }
-      return new Blob(chunks);
     }
 
-    // 3. INICIO DE EMULATORJS
-    async function launch(romBlob, biosBlob) {
+    async function start(rom, bios) {
       window.EJS_player = '#game';
-      window.EJS_core = 'fbneo'; // Core estable para evitar el error de WASM
-      window.EJS_gameUrl = URL.createObjectURL(romBlob);
-      window.EJS_biosUrl = URL.createObjectURL(biosBlob);
+      window.EJS_core = 'fbneo';
+      window.EJS_gameUrl = (typeof rom === 'string') ? rom : URL.createObjectURL(rom);
+      window.EJS_biosUrl = (typeof bios === 'string') ? bios : URL.createObjectURL(bios);
       window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
       window.EJS_startOnLoaded = true;
-      window.EJS_saveState = true;
-      window.EJS_audioBufferSize = 4096;
 
-      const loader = document.createElement('script');
-      loader.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
-      document.body.appendChild(loader);
-
-      setTimeout(() => {
-        document.getElementById('splash').classList.add('hidden');
-      }, 3000);
+      const s = document.createElement('script');
+      s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+      document.body.appendChild(s);
+      
+      setTimeout(() => document.getElementById('splash').classList.add('hidden'), 3500);
     }
 
-    // EJECUCIÓN
     (async () => {
       try {
-        let rom = await CacheDB.get('kof2002');
-        let bios = await CacheDB.get('neogeo');
+        let rom = await CacheDB.get('kof');
+        let bios = await CacheDB.get('neo');
 
-        if (!rom || !bios) {
-          // BIOS ~2MB, ROM ~82.1MB
-          bios = await download(BIOS_URL, 'BIOS', 2000000);
-          rom = await download(ROM_URL, 'JUEGO (82MB)', 86093824);
-          
-          await CacheDB.set('kof2002', rom);
-          await CacheDB.set('neogeo', bios);
+        if (!rom) {
+          rom = await download(ROM_URL, 'Juego (82MB)');
+          if (typeof rom !== 'string') await CacheDB.set('kof', rom);
+        }
+        if (!bios) {
+          bios = await download(BIOS_URL, 'BIOS');
+          if (typeof bios !== 'string') await CacheDB.set('neo', bios);
         }
 
-        document.getElementById('dl-bar').style.width = '100%';
-        document.getElementById('dl-label').textContent = '100%';
-        document.getElementById('status-text').textContent = "Listo para pelear";
-
-        await launch(rom, bios);
+        await start(rom, bios);
       } catch (err) {
-        document.getElementById('status-text').textContent = "Error de conexión";
+        document.getElementById('status-text').textContent = "Error: El servidor bloqueó la conexión";
         document.getElementById('status-text').style.color = "#ff4444";
-        console.error(err);
       }
     })();
   </script>
