@@ -37,39 +37,39 @@
 
   <script>
    <script>
-  // 1. CONFIGURACIÓN DE RUTAS VÍA JSDELIVR (Esto evita el Network Error de GitHub)
-  // Formato: https://cdn.jsdelivr.net/gh/USUARIO/REPO@BRANCH/ARCHIVO
-  const ROM_URL = 'https://cdn.jsdelivr.net/gh/theyessus/emulator@main/kof2002.zip';
-  const BIOS_URL = 'https://cdn.jsdelivr.net/gh/theyessus/emulator@main/neogeo.zip';
+  <script type="module">
+  // 1. TUS ENLACES DE CLOUDFLARE R2
+  const R2_BASE = 'https://pub-ba5ec238faea469894f40acba1e873db.r2.dev';
+  
+  // Asegúrate de que los nombres coincidan exactamente (mayúsculas/minúsculas)
+  const ROM_URL = `${R2_BASE}/kof2002.zip`;
+  const BIOS_URL = `${R2_BASE}/neogeo.zip`;
 
-  // 2. PARÁMETROS DEL EMULADOR
+  // 2. CONFIGURACIÓN DEL EMULADOR
   window.EJS_player = '#game';
-  window.EJS_core = 'fbneo'; // Core estable para NeoGeo
+  window.EJS_core = 'fbneo'; 
   window.EJS_gameUrl = ROM_URL;
   window.EJS_biosUrl = BIOS_URL;
   window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
   window.EJS_startOnLoaded = true;
-  
-  // 3. CARGA DEL MOTOR
-  const script = document.createElement('script');
-  script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
-  document.body.appendChild(script);
 
-  // 4. GESTIÓN DE LA PANTALLA DE CARGA
+  // 3. CARGA DEL LOADER
+  const loader = document.createElement('script');
+  loader.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+  document.body.appendChild(loader);
+
+  // 4. CONTROL DE LA PANTALLA DE CARGA (SPLASH)
   window.addEventListener('message', function(e) {
-    // Cuando el core o el juego dan señales de vida, quitamos el splash
     if (e.data === 'emulatorjs-game-loaded' || e.data === 'emulatorjs-core-loaded') {
-      setTimeout(() => {
-        document.getElementById('splash').classList.add('hidden');
-      }, 2000);
+      const splash = document.getElementById('splash');
+      if(splash) {
+        splash.style.opacity = '0';
+        setTimeout(() => splash.style.display = 'none', 600);
+      }
     }
   });
-
-  // Fallback de seguridad: Si en 20 segundos no hay respuesta, mostramos el emulador
-  setTimeout(() => {
-      const splash = document.getElementById('splash');
-      if(splash) splash.classList.add('hidden');
-  }, 20000);
+</script>
+  
 </script>
     
   </script>
