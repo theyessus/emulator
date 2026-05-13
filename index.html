@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>KOF 2002 — Retas Online</title>
+    <title>KOF 2002 — Retas</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
 
     <style>
@@ -25,7 +25,7 @@
         <div class="loader-content">
             <h1 id="splash-title">KOF 2002</h1>
             <div class="spinner"></div>
-            <p id="status-text" style="font-size: 12px; color: var(--accent);">CARGANDO DESDE R2...</p>
+            <p id="status-text" style="font-size: 12px; color: var(--accent);">CARGANDO...</p>
         </div>
     </div>
 
@@ -34,39 +34,33 @@
     </div>
 
     <script type="text/javascript">
-        // 1. URL UNIFICADA DE CLOUDFLARE R2
-        const R2_URL = 'https://pub-ba5ec238faea469894f40acba1e873db.r2.dev';
+        // 1. CONFIGURACIÓN
+        var R2_URL = 'https://pub-ba5ec238faea469894f40acba1e873db.r2.dev';
         
         window.EJS_player = '#game';
-        window.EJS_core = 'fbneo'; // FBNeo es más compatible que 'neogeo' para KOF2002
-        window.EJS_gameUrl = `${R2_URL}/kof2002.zip`;
-        window.EJS_biosUrl = `${R2_URL}/neogeo.zip`;
+        window.EJS_core = 'fbneo'; 
+        window.EJS_gameUrl = R2_URL + '/kof2002.zip';
+        window.EJS_biosUrl = R2_URL + '/neogeo.zip';
         window.EJS_pathtodata = 'https://cdn.emulatorjs.org/latest/data/';
-        
-        // 2. PARÁMETROS DE AUTO-ARRANQUE
         window.EJS_startOnLoaded = true;
         window.EJS_language = 'es';
-        window.EJS_forceLegacyDbi = false;
 
-        // 3. CARGA DEL LOADER
-        (function() {
-            const script = document.createElement('script');
-            script.src = 'https://cdn.emulatorjs.org/latest/data/loader.js';
-            script.async = false;
-            document.body.appendChild(script);
-        })();
-
-        // 4. EVENTOS DE PANTALLA
+        // 2. DETECTOR DE CARGA
         window.addEventListener('message', function(e) {
             if (e.data && typeof e.data === 'string' && e.data.includes('emulatorjs')) {
-                const splash = document.getElementById('splash');
-                if(splash) splash.classList.add('hidden');
+                var s = document.getElementById('splash');
+                if(s) s.classList.add('hidden');
             }
         });
 
-        // Forzar ocultar splash si el motor tarda (necesario en móviles)
-        setTimeout(() => {
-            const s = document.getElementById('splash');
+        // 3. CARGA DEL SCRIPT (Línea 47 corregida)
+        var ejs_script = document.createElement('script');
+        ejs_script.src = 'https://cdn.emulatorjs.org/latest/data/loader.js';
+        document.body.appendChild(ejs_script);
+
+        // Fallback
+        setTimeout(function() {
+            var s = document.getElementById('splash');
             if(s) s.classList.add('hidden');
         }, 15000);
     </script>
