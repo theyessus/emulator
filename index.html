@@ -30,35 +30,44 @@
     <div id="game"></div>
 
     <script type="text/javascript">
-        // URL de tu Cloudflare R2
-        var r2Url = 'https://pub-ba5ec238faea469894f40acba1e873db.r2.dev';
-
+        var r2 = 'https://pub-ba5ec238faea469894f40acba1e873db.r2.dev';
+        
         window.EJS_player = '#game';
         window.EJS_core = 'fbneo'; 
-        window.EJS_gameUrl = r2Url + '/kof2002.zip';
-        window.EJS_biosUrl = r2Url + '/neogeo.zip';
-        
-        // Usamos 'stable' porque Edge a veces rechaza los archivos experimentales de 'latest'
+        window.EJS_gameUrl = r2 + '/kof2002.zip';
+        window.EJS_biosUrl = r2 + '/neogeo.zip';
         window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
         window.EJS_startOnLoaded = true;
         window.EJS_language = 'en-US';
 
-        // Función para limpiar la pantalla manualmente
-        function startEmulator() {
-            var overlay = document.getElementById('overlay');
-            overlay.style.display = 'none';
-        }
+        // CARGA DEL MOTOR
+        var ejs = document.createElement('script');
+        ejs.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+        document.body.appendChild(ejs);
 
-        // Carga del motor
-        var script = document.createElement('script');
-        script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
-        document.body.appendChild(script);
-
-        // Auto-limpieza cuando el emulador responda
-        window.addEventListener('message', function(e) {
-            if (e.data && typeof e.data === 'string' && e.data.includes('emulatorjs')) {
-                startEmulator();
+        // --- ESTE ES EL SCRIPT DE "LIMPIEZA FORZADA" ---
+        // Se ejecuta cada segundo para verificar si el juego ya arrancó
+        setInterval(function() {
+            // 1. Buscamos cualquier capa que diga "Cargando" o "Splash"
+            var loader = document.getElementById('status') || 
+                         document.getElementById('overlay') || 
+                         document.getElementById('splash');
+            
+            // 2. Si detectamos que los controles de EmulatorJS ya aparecieron
+            // o si escuchas audio, borramos la capa de carga.
+            if (document.querySelector('.emulatorjs-controls') || document.querySelector('canvas')) {
+                if (loader) {
+                    loader.style.display = 'none';
+                    loader.style.opacity = '0';
+                    loader.style.pointerEvents = 'none'; // Para que no bloquee los clics
+                }
             }
+        }, 1000);
+
+        // Forzar enfoque al hacer clic para activar controles y video
+        document.addEventListener('click', function() {
+            var canvas = document.querySelector('canvas');
+            if (canvas) canvas.focus();
         });
     </script>
 </body>
