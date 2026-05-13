@@ -4,93 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>KOF 2002 — Retas Online</title>
-    
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
 
     <style>
-        :root {
-            --bg: #0E0F13;
-            --accent: #E8A24A;
-            --text: #E8E6DF;
-            --surface: #16181F;
-        }
-
-        body, html {
-            margin: 0; padding: 0;
-            width: 100%; height: 100%;
-            background: var(--bg);
-            color: var(--text);
-            font-family: 'DM Sans', sans-serif;
-            overflow: hidden;
-        }
-
-        /* Pantalla de Carga (Splash) */
-        #splash {
-            position: fixed;
-            inset: 0;
-            z-index: 1000;
-            background: var(--bg);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.8s ease, visibility 0.8s;
-        }
-
-        #splash.hidden {
-            opacity: 0;
-            visibility: hidden;
-        }
-
-        .loader-content {
-            width: 280px;
-            text-align: center;
-        }
-
-        #splash-title {
-            font-family: 'Bebas Neue', sans-serif;
-            font-size: 4rem;
-            color: var(--accent);
-            margin: 0;
-            letter-spacing: 2px;
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(232, 162, 74, 0.1);
-            border-top: 3px solid var(--accent);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        #status-text {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            color: var(--accent);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* Contenedor del Emulador */
-        #emulator-container {
-            width: 100vw;
-            height: 100vh;
-            background: #000;
-        }
-
-        #game {
-            width: 100%;
-            height: 100%;
-        }
+        :root { --bg: #0E0F13; --accent: #E8A24A; --text: #E8E6DF; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; overflow: hidden; }
+        #splash { position: fixed; inset: 0; z-index: 1000; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.8s ease; }
+        #splash.hidden { opacity: 0; visibility: hidden; }
+        .loader-content { width: 280px; text-align: center; }
+        #splash-title { font-family: 'Bebas Neue', sans-serif; font-size: 4rem; color: var(--accent); margin: 0; }
+        .spinner { width: 40px; height: 40px; border: 3px solid rgba(232, 162, 74, 0.1); border-top: 3px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #status-text { font-size: 0.75rem; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
+        #emulator-container { width: 100vw; height: 100vh; background: #000; }
+        #game { width: 100%; height: 100%; }
     </style>
 </head>
 <body>
@@ -99,7 +28,7 @@
         <div class="loader-content">
             <h1 id="splash-title">KOF 2002</h1>
             <div class="spinner"></div>
-            <p id="status-text">Iniciando Motor...</p>
+            <p id="status-text">Iniciando Motor y Descargando Datos...</p>
         </div>
     </div>
 
@@ -108,19 +37,25 @@
     </div>
 
     <script type="text/javascript">
-        // 1. CONFIGURACIÓN DE RUTAS (Tus archivos en Cloudflare R2)
-        const R2_BASE = 'https://pub-ba5ec238faea469894f40acba1e873db.r2.dev';
+        // 1. URLS DE CLOUDFLARE R2
+        // IMPORTANTE: Verifica que los archivos NO tengan mayúsculas en el panel de Cloudflare
+        const R2_URL = 'https://pub-ba5ec238faea469894f40acba1e873db.r2.dev';
         
         window.EJS_player = '#game';
-        window.EJS_core = 'fbneo'; // Core estable para NeoGeo
-        window.EJS_gameUrl = `${R2_BASE}/kof2002.zip`;
-        window.EJS_biosUrl = `${R2_BASE}/neogeo.zip`;
-        
-        // Ruta de archivos de sistema (Motor JS)
+        window.EJS_core = 'fbneo'; 
+        window.EJS_gameUrl = `${R2_URL}/kof2002.zip`;
+        window.EJS_biosUrl = `${R2_BASE_URL_FIX}/neogeo.zip`; // Se define abajo para evitar errores
+        const R2_BASE_URL_FIX = R2_URL;
+
+        // 2. CONFIGURACIÓN TÉCNICA PARA EVITAR NETWORK ERROR
+        window.EJS_biosUrl = `${R2_BASE_URL_FIX}/neogeo.zip`;
         window.EJS_pathtodata = 'https://cdn.emulatorjs.org/latest/data/';
         window.EJS_startOnLoaded = true;
+        
+        // Esta línea es VITAL para PC: evita que el emulador use métodos de descarga antiguos que dan error
+        window.EJS_forceLegacyDbi = false; 
 
-        // 2. CARGA DEL MOTOR
+        // 3. CARGA DEL MOTOR CON FALLBACK
         (function() {
             const ejs = document.createElement('script');
             ejs.src = 'https://cdn.emulatorjs.org/latest/data/loader.js';
@@ -128,26 +63,19 @@
             document.body.appendChild(ejs);
         })();
 
-        // 3. LOGICA DE PANTALLA (Para PC y Móvil)
-        const hideSplash = () => {
-            const splash = document.getElementById('splash');
-            if (splash && !splash.classList.contains('hidden')) {
-                splash.classList.add('hidden');
-                console.log("Motor listo.");
-            }
-        };
-
-        // Detectar cuando el emulador envía señales de carga
+        // 4. GESTIÓN DE PANTALLA
         window.addEventListener('message', function(e) {
+            // Si detectamos que el core ya está trabajando, ocultamos el splash
             if (e.data && typeof e.data === 'string' && e.data.includes('emulatorjs')) {
-                hideSplash();
+                document.getElementById('splash').classList.add('hidden');
             }
         });
 
-        // "DESPERTADOR" DE SEGURIDAD (Si en 12s no carga, quitamos el splash)
-        // Esto soluciona el problema de "Cargando motor" infinito en móviles
-        setTimeout(hideSplash, 12000);
-
+        // Si después de 15 segundos no carga, forzamos para ver el error real del emulador
+        setTimeout(() => {
+            const splash = document.getElementById('splash');
+            if (splash) splash.classList.add('hidden');
+        }, 15000);
     </script>
 </body>
 </html>
