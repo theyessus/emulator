@@ -39,40 +39,46 @@
    <script>
   <script type="module">() => {
     <script>
-  // 1. CONFIGURACIÓN UNIVERSAL (PC Y MÓVIL)
+<script>
+  // 1. CONFIGURACIÓN DE RUTAS (R2)
   const R2_URL = 'https://pub-ba5ec238faea469894f40acba1e873db.r2.dev';
-
+  
+  // 2. PARÁMETROS DEL EMULADOR
   window.EJS_player = '#game';
-  window.EJS_core = 'fbneo'; // El más compatible con NeoGeo
+  window.EJS_core = 'fbneo'; // El más estable para KOF
   window.EJS_gameUrl = `${R2_URL}/kof2002.zip`;
   window.EJS_biosUrl = `${R2_URL}/neogeo.zip`;
   
-  // Cambiamos a la ruta 'latest' que suele ser más estable para móviles
+  // Usamos 'latest' para mayor compatibilidad con Chrome/Brave móvil
   window.EJS_pathtodata = 'https://cdn.emulatorjs.org/latest/data/';
   window.EJS_startOnLoaded = true;
+  
+  // ESTO ES CLAVE PARA MÓVILES: Evita que el navegador cierre el juego por falta de memoria
+  window.EJS_WS_URL = ''; 
 
-  // 2. CARGA DEL MOTOR
+  // 3. CARGA DEL LOADER
   const script = document.createElement('script');
   script.src = 'https://cdn.emulatorjs.org/latest/data/loader.js';
   document.body.appendChild(script);
 
-  // 3. GESTIÓN DE PANTALLA (Para que no se quede pegado el splash)
+  // 4. DETECTOR DE INICIO (Quita el splash en cuanto hay señal)
   window.addEventListener('message', function(e) {
-    // Si el emulador envía cualquier señal de vida, quitamos el splash
-    if (e.data.includes('emulatorjs')) {
+    if (e.data && typeof e.data === 'string' && e.data.includes('emulatorjs')) {
       const splash = document.getElementById('splash');
       if(splash) splash.classList.add('hidden');
     }
   });
 
-  // 4. EL "DESPERTADOR" (Si en 12 seg no carga, forzamos la entrada)
+  // 5. SOLUCIÓN PARA CELULARES (Si en 10s no responde, forzamos la entrada)
   setTimeout(() => {
     const splash = document.getElementById('splash');
     if (splash && !splash.classList.contains('hidden')) {
-      console.log("Forzando visualización del emulador...");
+      console.log("Forzando visualización para móvil...");
       splash.classList.add('hidden');
     }
-  }, 12000);
+  }, 10000);
+</script>
+  
 </script>
   
     
