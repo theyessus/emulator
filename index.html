@@ -3,46 +3,61 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>KOF 2002 — Fix</title>
+    <title>KOF 2002 - Final Build</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; color: #fff; font-family: sans-serif; }
         #game { width: 100vw; height: 100vh; }
-        #loading {
-            position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
-            color: #E8A24A; font-family: sans-serif; background: #0E0F13; z-index: 10;
+        #overlay {
+            position: fixed; inset: 0; background: #0E0F13;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 99; cursor: pointer; text-align: center;
         }
-        #loading.hide { display: none; }
+        .btn {
+            padding: 15px 30px; border: 2px solid #E8A24A; color: #E8A24A;
+            text-transform: uppercase; font-weight: bold; letter-spacing: 2px;
+        }
     </style>
 </head>
 <body>
 
-    <div id="loading">CARGANDO MOTOR...</div>
+    <div id="overlay" onclick="startEmulator()">
+        <div id="status-container">
+            <div class="btn" id="btn-text">Cargando datos...</div>
+            <p style="font-size: 11px; margin-top: 15px; color: #666;">(Si tarda, pulsa aquí para forzar el inicio)</p>
+        </div>
+    </div>
+
     <div id="game"></div>
 
     <script type="text/javascript">
-        // 1. CONFIGURACIÓN LIMPIA
-        var r2 = 'https://pub-ba5ec238faea469894f40acba1e873db.r2.dev';
-        
+        // URL de tu Cloudflare R2
+        var r2Url = 'https://pub-ba5ec238faea469894f40acba1e873db.r2.dev';
+
         window.EJS_player = '#game';
         window.EJS_core = 'fbneo'; 
-        window.EJS_gameUrl = r2 + '/kof2002.zip';
-        window.EJS_biosUrl = r2 + '/neogeo.zip';
+        window.EJS_gameUrl = r2Url + '/kof2002.zip';
+        window.EJS_biosUrl = r2Url + '/neogeo.zip';
         
-        // 2. CAMBIO DE SERVIDOR DE DATOS (Este es el que corrige el ErrnoError)
+        // Usamos 'stable' porque Edge a veces rechaza los archivos experimentales de 'latest'
         window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-        
         window.EJS_startOnLoaded = true;
-        window.EJS_DEBUG = true;
+        window.EJS_language = 'en-US';
 
-        // 3. CARGA DEL LOADER
-        var scr = document.createElement('script');
-        scr.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
-        document.body.appendChild(scr);
+        // Función para limpiar la pantalla manualmente
+        function startEmulator() {
+            var overlay = document.getElementById('overlay');
+            overlay.style.display = 'none';
+        }
 
-        // 4. OCULTAR CARGA
+        // Carga del motor
+        var script = document.createElement('script');
+        script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+        document.body.appendChild(script);
+
+        // Auto-limpieza cuando el emulador responda
         window.addEventListener('message', function(e) {
-            if (e.data === 'emulatorjs-game-loaded') {
-                document.getElementById('loading').classList.add('hide');
+            if (e.data && typeof e.data === 'string' && e.data.includes('emulatorjs')) {
+                startEmulator();
             }
         });
     </script>
