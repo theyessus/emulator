@@ -36,36 +36,42 @@
   </div>
 
   <script>
-    // URL DIRECTA A TU RELEASE
-    const ROM_URL = 'https://github.com/theyessus/emulator/releases/download/v1.0/kof2002.zip';
-    const BIOS_URL = 'https://theyessus.github.io/emulator/neogeo.zip';
+   <script>
+  // 1. CONFIGURACIÓN DE RUTAS VÍA JSDELIVR (Esto evita el Network Error de GitHub)
+  // Formato: https://cdn.jsdelivr.net/gh/USUARIO/REPO@BRANCH/ARCHIVO
+  const ROM_URL = 'https://cdn.jsdelivr.net/gh/theyessus/emulator@main/kof2002.zip';
+  const BIOS_URL = 'https://cdn.jsdelivr.net/gh/theyessus/emulator@main/neogeo.zip';
 
-    window.EJS_player = '#game';
-    window.EJS_core = 'fbneo'; // Motor más estable
-    window.EJS_gameUrl = ROM_URL;
-    window.EJS_biosUrl = BIOS_URL;
-    window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-    window.EJS_startOnLoaded = true;
-    window.EJS_DEBUG = false; // Cambia a true si quieres ver errores técnicos en consola
+  // 2. PARÁMETROS DEL EMULADOR
+  window.EJS_player = '#game';
+  window.EJS_core = 'fbneo'; // Core estable para NeoGeo
+  window.EJS_gameUrl = ROM_URL;
+  window.EJS_biosUrl = BIOS_URL;
+  window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+  window.EJS_startOnLoaded = true;
+  
+  // 3. CARGA DEL MOTOR
+  const script = document.createElement('script');
+  script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+  document.body.appendChild(script);
 
-    // Cargamos el motor de EmulatorJS
-    const script = document.createElement('script');
-    script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
-    document.body.appendChild(script);
-
-    // Quitamos la pantalla de carga después de que el motor inicie
-    window.addEventListener('message', function(e) {
-      if (e.data === 'emulatorjs-game-loaded' || e.data === 'emulatorjs-core-loaded') {
-        setTimeout(() => {
-          document.getElementById('splash').classList.add('hidden');
-        }, 2000);
-      }
-    });
-
-    // Fallback: Si en 15 segundos no ha cargado, quitamos el splash igual
-    setTimeout(() => {
+  // 4. GESTIÓN DE LA PANTALLA DE CARGA
+  window.addEventListener('message', function(e) {
+    // Cuando el core o el juego dan señales de vida, quitamos el splash
+    if (e.data === 'emulatorjs-game-loaded' || e.data === 'emulatorjs-core-loaded') {
+      setTimeout(() => {
         document.getElementById('splash').classList.add('hidden');
-    }, 15000);
+      }, 2000);
+    }
+  });
+
+  // Fallback de seguridad: Si en 20 segundos no hay respuesta, mostramos el emulador
+  setTimeout(() => {
+      const splash = document.getElementById('splash');
+      if(splash) splash.classList.add('hidden');
+  }, 20000);
+</script>
+    
   </script>
 </body>
 </html>
