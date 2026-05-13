@@ -3,66 +3,48 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>KOF 2002 — Retas</title>
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
-
+    <title>KOF 2002 — Fix</title>
     <style>
-        :root { --bg: #0E0F13; --accent: #E8A24A; --text: #E8E6DF; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; overflow: hidden; }
-        #splash { position: fixed; inset: 0; z-index: 1000; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.8s ease; }
-        #splash.hidden { opacity: 0; visibility: hidden; }
-        .loader-content { width: 280px; text-align: center; }
-        #splash-title { font-family: 'Bebas Neue', sans-serif; font-size: 4rem; color: var(--accent); margin: 0; }
-        .spinner { width: 40px; height: 40px; border: 3px solid rgba(232, 162, 74, 0.1); border-top: 3px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #emulator-container { width: 100vw; height: 100vh; background: #000; }
-        #game { width: 100%; height: 100%; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
+        #game { width: 100vw; height: 100vh; }
+        #loading {
+            position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+            color: #E8A24A; font-family: sans-serif; background: #0E0F13; z-index: 10;
+        }
+        #loading.hide { display: none; }
     </style>
 </head>
 <body>
 
-    <div id="splash">
-        <div class="loader-content">
-            <h1 id="splash-title">KOF 2002</h1>
-            <div class="spinner"></div>
-            <p id="status-text" style="font-size: 12px; color: var(--accent);">CARGANDO...</p>
-        </div>
-    </div>
-
-    <div id="emulator-container">
-        <div id="game"></div>
-    </div>
+    <div id="loading">CARGANDO MOTOR...</div>
+    <div id="game"></div>
 
     <script type="text/javascript">
-        // 1. CONFIGURACIÓN
-        var R2_URL = 'https://pub-ba5ec238faea469894f40acba1e873db.r2.dev';
+        // 1. CONFIGURACIÓN LIMPIA
+        var r2 = 'https://pub-ba5ec238faea469894f40acba1e873db.r2.dev';
         
         window.EJS_player = '#game';
         window.EJS_core = 'fbneo'; 
-        window.EJS_gameUrl = R2_URL + '/kof2002.zip';
-        window.EJS_biosUrl = R2_URL + '/neogeo.zip';
-        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/latest/data/';
+        window.EJS_gameUrl = r2 + '/kof2002.zip';
+        window.EJS_biosUrl = r2 + '/neogeo.zip';
+        
+        // 2. CAMBIO DE SERVIDOR DE DATOS (Este es el que corrige el ErrnoError)
+        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+        
         window.EJS_startOnLoaded = true;
-        window.EJS_language = 'es';
+        window.EJS_DEBUG = true;
 
-        // 2. DETECTOR DE CARGA
+        // 3. CARGA DEL LOADER
+        var scr = document.createElement('script');
+        scr.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+        document.body.appendChild(scr);
+
+        // 4. OCULTAR CARGA
         window.addEventListener('message', function(e) {
-            if (e.data && typeof e.data === 'string' && e.data.includes('emulatorjs')) {
-                var s = document.getElementById('splash');
-                if(s) s.classList.add('hidden');
+            if (e.data === 'emulatorjs-game-loaded') {
+                document.getElementById('loading').classList.add('hide');
             }
         });
-
-        // 3. CARGA DEL SCRIPT (Línea 47 corregida)
-        var ejs_script = document.createElement('script');
-        ejs_script.src = 'https://cdn.emulatorjs.org/latest/data/loader.js';
-        document.body.appendChild(ejs_script);
-
-        // Fallback
-        setTimeout(function() {
-            var s = document.getElementById('splash');
-            if(s) s.classList.add('hidden');
-        }, 15000);
     </script>
 </body>
 </html>
