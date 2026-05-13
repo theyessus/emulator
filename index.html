@@ -25,14 +25,8 @@
     #dl-bar { width: 0%; height: 100%; background: var(--accent); transition: width 0.2s; }
     #dl-label { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: var(--accent); }
 
-    #emulator-wrap { width: 100vw; height: 100vh; background: #000; display: flex; align-items: center; justify-content: center; }
+    #emulator-wrap { width: 100vw; height: 100vh; background: #000; }
     #game { width: 100%; height: 100%; }
-
-    #btn-open-sidebar {
-      position: fixed; bottom: 25px; right: 25px; z-index: 50;
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); padding: 15px; border-radius: 50%; cursor: pointer;
-    }
   </style>
 </head>
 <body>
@@ -42,30 +36,25 @@
       <h1 id="splash-title">KOF 2002</h1>
       <div class="progress-track"><div id="dl-bar"></div></div>
       <div id="dl-label">0%</div>
-      <p id="status-text" style="font-size:0.75rem; color:var(--muted); letter-spacing:1px; text-transform:uppercase;">Iniciando descarga de Release...</p>
+      <p id="status-text" style="font-size:0.75rem; color:var(--muted); letter-spacing:1px;">CONECTANDO CON SERVIDOR...</p>
     </div>
   </div>
 
-  <div id="emulator-wrap">
-    <div id="game"></div>
-  </div>
-
-  <button id="btn-open-sidebar">⚙️</button>
+  <div id="emulator-wrap"><div id="game"></div></div>
 
   <script type="module">
-    // ────────────────────────────────────────────────────────────────
-    // CONFIGURACIÓN DE TU RELEASE (https://github.com/theyessus/emulator/releases/download/kof/kof2002.zip)
-    // ────────────────────────────────────────────────────────────────
-    const ROM_RELEASE_URL = 'https://github.com/theyessus/emulator/releases/download/kof/kof2002.zip';
+    // 1. CONFIGURACIÓN
+    const ROM_URL = 'https://github.com/theyessus/emulator/releases/download/v1.0/kof2002.zip';
     const BIOS_URL = 'https://theyessus.github.io/emulator/neogeo.zip';
-
-    // Proxy para evitar el bloqueo CORS de GitHub Releases
-    const PROXY = 'https://api.allorigins.win/raw?url=';
+    
+    // Proxy primario y secundario
+    const PROXY1 = 'https://api.allorigins.win/raw?url=';
+    const PROXY2 = 'https://corsproxy.io/?';
 
     const CacheDB = {
       async _db() {
         return new Promise(res => {
-          const req = indexedDB.open('KOF_FINAL_STORAGE', 1);
+          const req = indexedDB.open('KOF_FINAL_V5', 1);
           req.onupgradeneeded = () => req.result.createObjectStore('files');
           req.onsuccess = () => res(req.result);
         });
@@ -84,44 +73,52 @@
     };
 
     async function download(url, label) {
-      // Si el archivo viene de GitHub, usamos el proxy para que no nos bloquee
-      const finalUrl = url.includes('github.com') ? PROXY + encodeURIComponent(url) : url;
+      // Intentar primero con Proxy 1
+      let finalUrl = url.includes('github.com') ? PROXY1 + encodeURIComponent(url) : url;
       
-      const resp = await fetch(finalUrl);
-      if (!resp.ok) throw new Error("Error de conexión");
-      
-      const reader = resp.body.getReader();
-      const total = +resp.headers.get('Content-Length') || 86093824; 
-      let loaded = 0;
-      let chunks = [];
+      try {
+        let resp = await fetch(finalUrl);
+        if (!resp.ok) {
+            // Si falla, intentar con Proxy 2
+            finalUrl = PROXY2 + encodeURIComponent(url);
+            resp = await fetch(finalUrl);
+        }
+        
+        const reader = resp.body.getReader();
+        const total = +resp.headers.get('Content-Length') || 86093824; 
+        let loaded = 0;
+        let chunks = [];
 
-      while(true) {
-        const {done, value} = await reader.read();
-        if (done) break;
-        chunks.push(value);
-        loaded += value.length;
-        const pct = Math.min(Math.round((loaded / total) * 100), 99);
-        document.getElementById('dl-bar').style.width = pct + '%';
-        document.getElementById('dl-label').textContent = pct + '%';
-        document.getElementById('status-text').textContent = `Descargando ${label}...`;
+        while(true) {
+          const {done, value} = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          loaded += value.length;
+          const pct = Math.min(Math.round((loaded / total) * 100), 99);
+          document.getElementById('dl-bar').style.width = pct + '%';
+          document.getElementById('dl-label').textContent = pct + '%';
+          document.getElementById('status-text').textContent = `DESCARGANDO ${label}...`;
+        }
+        return new Blob(chunks);
+      } catch (e) {
+        console.warn("Fallo de descarga, usando URL directa...");
+        return url; // Plan C: URL Directa
       }
-      return new Blob(chunks);
     }
 
-    async function start(romBlob, biosBlob) {
+    async function start(rom, bios) {
       window.EJS_player = '#game';
-      window.EJS_core = 'fbneo'; // Core estable para NeoGeo
-      window.EJS_gameUrl = URL.createObjectURL(romBlob);
-      window.EJS_biosUrl = URL.createObjectURL(biosBlob);
+      window.EJS_core = 'fbneo';
+      window.EJS_gameUrl = (rom instanceof Blob) ? URL.createObjectURL(rom) : rom;
+      window.EJS_biosUrl = (bios instanceof Blob) ? URL.createObjectURL(bios) : bios;
       window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
       window.EJS_startOnLoaded = true;
-      window.EJS_saveState = true;
 
       const loader = document.createElement('script');
       loader.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
       document.body.appendChild(loader);
       
-      setTimeout(() => document.getElementById('splash').classList.add('hidden'), 3000);
+      setTimeout(() => document.getElementById('splash').classList.add('hidden'), 5000);
     }
 
     (async () => {
@@ -130,16 +127,20 @@
         let bios = await CacheDB.get('neo');
 
         if (!rom || !bios) {
-          bios = await download(BIOS_URL, 'BIOS');
-          rom = await download(ROM_RELEASE_URL, 'KOF 2002 (82MB)');
-          await CacheDB.set('kof', rom);
-          await CacheDB.set('neo', bios);
+          bios = await download(BIOS_URL, 'SISTEMA');
+          rom = await download(ROM_URL, 'JUEGO');
+          
+          if (rom instanceof Blob && bios instanceof Blob) {
+            await CacheDB.set('kof', rom);
+            await CacheDB.set('neo', bios);
+          }
         }
 
+        document.getElementById('dl-bar').style.width = '100%';
+        document.getElementById('dl-label').textContent = '100%';
         start(rom, bios);
       } catch (e) {
-        document.getElementById('status-text').textContent = "ERROR: No se pudo conectar con GitHub";
-        document.getElementById('status-text').style.color = "#ff4444";
+        document.getElementById('status-text').textContent = "ERROR DE CONEXIÓN";
       }
     })();
   </script>
