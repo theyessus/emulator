@@ -45,29 +45,20 @@
   const ROM_URL = `${R2_BASE}/kof2002.zip`;
   const BIOS_URL = `${R2_BASE}/neogeo.zip`;
 
-  // 2. CONFIGURACIÓN DEL EMULADOR
+    // Cambia el inicio del emulador por este más robusto
   window.EJS_player = '#game';
   window.EJS_core = 'fbneo'; 
-  window.EJS_gameUrl = ROM_URL;
-  window.EJS_biosUrl = BIOS_URL;
+  window.EJS_gameUrl = 'https://pub-ba5ec238faea469894f40acba1e873db.r2.dev/kof2002.zip';
+  window.EJS_biosUrl = 'https://pub-ba5ec238faea469894f40acba1e873db.r2.dev/neogeo.zip';
   window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
   window.EJS_startOnLoaded = true;
 
-  // 3. CARGA DEL LOADER
-  const loader = document.createElement('script');
-  loader.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
-  document.body.appendChild(loader);
-
-  // 4. CONTROL DE LA PANTALLA DE CARGA (SPLASH)
-  window.addEventListener('message', function(e) {
-    if (e.data === 'emulatorjs-game-loaded' || e.data === 'emulatorjs-core-loaded') {
-      const splash = document.getElementById('splash');
-      if(splash) {
-        splash.style.opacity = '0';
-        setTimeout(() => splash.style.display = 'none', 600);
-      }
-    }
-  });
+  // Forzar que el Splash desaparezca si el emulador tarda
+  setTimeout(() => {
+    const splash = document.getElementById('splash');
+    if (splash) splash.classList.add('hidden');
+  }, 10000); // 10 segundos máximo
+    
 </script>
   
 </script>
