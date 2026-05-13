@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KOF 2002 — theyessus.github.io</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg: #0E0F13; --surface: #16181F; --surface2: #1E2029;
+      --border: rgba(255,255,255,0.07); --accent: #E8A24A;
+      --text: #E8E6DF; --muted: #6B6A65; --radius: 14px;
+    }
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; overflow: hidden; }
+    
+    #splash { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.6s; }
+    #splash.hidden { opacity: 0; visibility: hidden; }
+    .loader-content { width: 300px; text-align: center; }
+    #splash-title { font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; color: var(--accent); margin: 0; line-height: 1; }
+    
+    .progress-track { width: 100%; height: 8px; background: var(--surface2); border-radius: 10px; overflow: hidden; margin: 20px 0 10px 0; }
+    #dl-bar { width: 0%; height: 100%; background: var(--accent); transition: width 0.2s ease-out; box-shadow: 0 0 15px rgba(232, 162, 74, 0.3); }
+    
+    #status-text { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; }
+    #dl-label { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: var(--accent); margin-top: 5px; }
+
+    #emulator-wrap { width: 100vw; height: 100vh; background: #000; display: flex; align-items: center; justify-content: center; }
+    #game { width: 100%; height: 100%; }
+
+    #btn-open-sidebar {
+      position: fixed; bottom: 25px; right: 25px; z-index: 50;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); padding: 15px; border-radius: 50%; cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="splash">
+    <div class="loader-content">
+      <h1 id="splash-title">KOF 2002</h1>
+      <div class="progress-track"><div id="dl-bar"></div></div>
+      <div id="dl-label">0%</div>
+      <p id="status-text">Iniciando sistema...</p>
+    </div>
+  </div>
+
+  <div id="emulator-wrap">
+    <div id="game"></div>
+  </div>
+
+  <button id="btn-open-sidebar">⚙️</button>
+
+  <script type="module">
+    // ────────────────────────────────────────────────────────────────
+    // CONFIGURACIÓN DE RUTAS
+    // ────────────────────────────────────────────────────────────────
+    const GITHUB_BASE = 'https://theyessus.github.io/emulator';
+    // Tu enlace de Dropbox con raw=1
+    const ROM_URL = 'https://www.dropbox.com/scl/fi/g57leqv4iico93dfr4e71/kof2002.zip?rlkey=zn7ucdgvdiv4zrdorm13jqvy1&st=2774sffa&raw=1';
+    const BIOS_URL = `https://theyessus.github.io/emulator/neogeo.zip`;
+
+    // 1. GESTIÓN DE CACHÉ (IndexedDB)
+    const CacheDB = {
+      async _db() {
+        return new Promise(res => {
+          const req = indexedDB.open('KOF2002_PLAYER_V1', 1);
+          req.onupgradeneeded = () => req.result.createObjectStore('files');
+          req.onsuccess = () => res(req.result);
+        });
+      },
+      async get(key) {
+        const db = await this._db();
+        return new Promise(res => {
+          const r = db.transaction('files').objectStore('files').get(key);
+          r.onsuccess = () => res(r.result);
+        });
+      },
+      async set(key, val) {
+        const db = await this._db();
+        db.transaction('files', 'readwrite').objectStore('files').put(val, key);
+      }
+    };
+
+    // 2. DESCARGA CON PROGRESO (82.1 MB)
+    async function download(url, label, expectedSize) {
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error("Error de red");
+      
+      const reader = resp.body.getReader();
+      const total = +resp.headers.get('Content-Length') || expectedSize;
+      let loaded = 0;
+      let chunks = [];
+
+      while(true) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        loaded += value.length;
+        const pct = Math.min(Math.round((loaded / total) * 100), 99);
+        
+        document.getElementById('dl-bar').style.width = pct + '%';
+        document.getElementById('dl-label').textContent = pct + '%';
+        document.getElementById('status-text').textContent = `Descargando ${label}...`;
+      }
+      return new Blob(chunks);
+    }
+
+    // 3. INICIO DE EMULATORJS
+    async function launch(romBlob, biosBlob) {
+      window.EJS_player = '#game';
+      window.EJS_core = 'fbneo'; // Core estable para evitar el error de WASM
+      window.EJS_gameUrl = URL.createObjectURL(romBlob);
+      window.EJS_biosUrl = URL.createObjectURL(biosBlob);
+      window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+      window.EJS_startOnLoaded = true;
+      window.EJS_saveState = true;
+      window.EJS_audioBufferSize = 4096;
+
+      const loader = document.createElement('script');
+      loader.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+      document.body.appendChild(loader);
+
+      setTimeout(() => {
+        document.getElementById('splash').classList.add('hidden');
+      }, 3000);
+    }
+
+    // EJECUCIÓN
+    (async () => {
+      try {
+        let rom = await CacheDB.get('kof2002');
+        let bios = await CacheDB.get('neogeo');
+
+        if (!rom || !bios) {
+          // BIOS ~2MB, ROM ~82.1MB
+          bios = await download(BIOS_URL, 'BIOS', 2000000);
+          rom = await download(ROM_URL, 'JUEGO (82MB)', 86093824);
+          
+          await CacheDB.set('kof2002', rom);
+          await CacheDB.set('neogeo', bios);
+        }
+
+        document.getElementById('dl-bar').style.width = '100%';
+        document.getElementById('dl-label').textContent = '100%';
+        document.getElementById('status-text').textContent = "Listo para pelear";
+
+        await launch(rom, bios);
+      } catch (err) {
+        document.getElementById('status-text').textContent = "Error de conexión";
+        document.getElementById('status-text').style.color = "#ff4444";
+        console.error(err);
+      }
+    })();
+  </script>
+</body>
+</html>
