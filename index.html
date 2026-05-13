@@ -37,27 +37,44 @@
 
   <script>
    <script>
-  <script type="module">
-  // 1. TUS ENLACES DE CLOUDFLARE R2
-  const R2_BASE = 'https://pub-ba5ec238faea469894f40acba1e873db.r2.dev';
-  
-  // Asegúrate de que los nombres coincidan exactamente (mayúsculas/minúsculas)
-  const ROM_URL = `${R2_BASE}/kof2002.zip`;
-  const BIOS_URL = `${R2_BASE}/neogeo.zip`;
+  <script type="module">() => {
+    <script>
+  // 1. CONFIGURACIÓN UNIVERSAL (PC Y MÓVIL)
+  const R2_URL = 'https://pub-ba5ec238faea469894f40acba1e873db.r2.dev';
 
-    // Cambia el inicio del emulador por este más robusto
   window.EJS_player = '#game';
-  window.EJS_core = 'fbneo'; 
-  window.EJS_gameUrl = 'https://pub-ba5ec238faea469894f40acba1e873db.r2.dev/kof2002.zip';
-  window.EJS_biosUrl = 'https://pub-ba5ec238faea469894f40acba1e873db.r2.dev/neogeo.zip';
-  window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+  window.EJS_core = 'fbneo'; // El más compatible con NeoGeo
+  window.EJS_gameUrl = `${R2_URL}/kof2002.zip`;
+  window.EJS_biosUrl = `${R2_URL}/neogeo.zip`;
+  
+  // Cambiamos a la ruta 'latest' que suele ser más estable para móviles
+  window.EJS_pathtodata = 'https://cdn.emulatorjs.org/latest/data/';
   window.EJS_startOnLoaded = true;
 
-  // Forzar que el Splash desaparezca si el emulador tarda
+  // 2. CARGA DEL MOTOR
+  const script = document.createElement('script');
+  script.src = 'https://cdn.emulatorjs.org/latest/data/loader.js';
+  document.body.appendChild(script);
+
+  // 3. GESTIÓN DE PANTALLA (Para que no se quede pegado el splash)
+  window.addEventListener('message', function(e) {
+    // Si el emulador envía cualquier señal de vida, quitamos el splash
+    if (e.data.includes('emulatorjs')) {
+      const splash = document.getElementById('splash');
+      if(splash) splash.classList.add('hidden');
+    }
+  });
+
+  // 4. EL "DESPERTADOR" (Si en 12 seg no carga, forzamos la entrada)
   setTimeout(() => {
     const splash = document.getElementById('splash');
-    if (splash) splash.classList.add('hidden');
-  }, 10000); // 10 segundos máximo
+    if (splash && !splash.classList.contains('hidden')) {
+      console.log("Forzando visualización del emulador...");
+      splash.classList.add('hidden');
+    }
+  }, 12000);
+</script>
+  
     
 </script>
   
