@@ -3,72 +3,572 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>KOF 2002 - Final Build</title>
+    <title>ARCADE</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; color: #fff; font-family: sans-serif; }
-        #game { width: 100vw; height: 100vh; }
-        #overlay {
-            position: fixed; inset: 0; background: #0E0F13;
-            display: flex; align-items: center; justify-content: center;
-            z-index: 99; cursor: pointer; text-align: center;
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&display=swap');
+
+        :root {
+            --gold: #E8A24A;
+            --red: #e63946;
+            --blue: #00b4d8;
+            --bg: #0E0F13;
+            --panel: #13141a;
+            --border: #1e1f28;
         }
-        .btn {
-            padding: 15px 30px; border: 2px solid #E8A24A; color: #E8A24A;
-            text-transform: uppercase; font-weight: bold; letter-spacing: 2px;
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body, html {
+            width: 100%; height: 100%;
+            background: var(--bg);
+            color: #fff;
+            font-family: 'Orbitron', monospace;
+            overflow: hidden;
+        }
+
+        /* ── MENU ── */
+        #menu {
+            width: 100vw; height: 100vh;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* scanlines overlay */
+        #menu::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0,0,0,0.18) 2px,
+                rgba(0,0,0,0.18) 4px
+            );
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* ── LEFT: PREVIEW ── */
+        #preview-panel {
+            width: 55%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        /* CRT bezel effect */
+        #preview-panel::before {
+            content: '';
+            position: absolute;
+            inset: 24px;
+            border-radius: 12px;
+            box-shadow:
+                inset 0 0 40px rgba(0,0,0,0.8),
+                inset 0 0 4px rgba(255,255,255,0.05),
+                0 0 0 2px #1a1b22,
+                0 0 0 6px #111,
+                0 0 40px rgba(232,162,74,0.08);
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        #screen-bg {
+            position: absolute;
+            inset: 30px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #cover-img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            display: block;
+            filter: saturate(1.1) contrast(1.05);
+            transition: opacity 0.4s ease;
+        }
+
+        /* Fake screen glow */
+        #screen-glow {
+            position: absolute;
+            inset: 20px;
+            border-radius: 10px;
+            pointer-events: none;
+            z-index: 3;
+            transition: box-shadow 0.5s ease;
+        }
+
+        /* Arcade cabinet frame decorations */
+        .cab-deco {
+            position: absolute;
+            background: #1a1b22;
+            border: 1px solid #222;
+        }
+        .cab-top    { top: 0; left: 0; right: 0; height: 22px; }
+        .cab-bottom { bottom: 0; left: 0; right: 0; height: 22px; }
+        .cab-left   { top: 22px; bottom: 22px; left: 0; width: 22px; }
+        .cab-right  { top: 22px; bottom: 22px; right: 0; width: 22px; }
+
+        /* coin slots */
+        .coin-slot {
+            position: absolute;
+            bottom: 4px;
+            width: 28px; height: 6px;
+            background: #0a0a0e;
+            border-radius: 3px;
+            border: 1px solid #333;
+        }
+        .coin-slot:nth-child(5) { left: calc(50% - 18px); }
+        .coin-slot:nth-child(6) { left: calc(50% + 2px); }
+
+        /* INSERT COIN blink */
+        #insert-coin {
+            position: absolute;
+            bottom: 36px;
+            left: 0; right: 0;
+            text-align: center;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 9px;
+            color: var(--gold);
+            letter-spacing: 2px;
+            animation: blink 1s step-end infinite;
+            z-index: 4;
+        }
+
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* ── DIVIDER ── */
+        #divider {
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(180deg,
+                transparent 0%,
+                var(--gold) 20%,
+                var(--gold) 80%,
+                transparent 100%
+            );
+            opacity: 0.3;
+            flex-shrink: 0;
+        }
+
+        /* ── RIGHT: SELECTOR ── */
+        #selector-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 30px 28px;
+            overflow: hidden;
+        }
+
+        #arcade-title {
+            font-family: 'Press Start 2P', monospace;
+            font-size: clamp(9px, 1.8vw, 14px);
+            color: var(--gold);
+            letter-spacing: 2px;
+            text-align: center;
+            margin-bottom: 6px;
+            text-shadow: 0 0 20px rgba(232,162,74,0.5);
+        }
+
+        #arcade-sub {
+            text-align: center;
+            font-size: 9px;
+            color: #333;
+            letter-spacing: 3px;
+            margin-bottom: 28px;
+            text-transform: uppercase;
+        }
+
+        /* GAME LIST */
+        #game-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        #game-list::-webkit-scrollbar { display: none; }
+
+        .game-card {
+            position: relative;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--panel);
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s, transform 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            overflow: hidden;
+        }
+
+        .game-card::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 3px;
+            border-radius: 4px 0 0 4px;
+            transition: background 0.2s;
+        }
+
+        .game-card:hover,
+        .game-card.active {
+            border-color: var(--gold);
+            background: #1a1b24;
+            transform: translateX(4px);
+        }
+
+        .game-card:hover::before,
+        .game-card.active::before {
+            background: var(--gold);
+        }
+
+        .game-card.active {
+            box-shadow: 0 0 20px rgba(232,162,74,0.12);
+        }
+
+        .game-thumb {
+            width: 52px; height: 52px;
+            object-fit: cover;
+            border-radius: 4px;
+            flex-shrink: 0;
+            border: 1px solid #222;
+            background: #0a0a0e;
+        }
+
+        .game-info { flex: 1; min-width: 0; }
+
+        .game-title {
+            font-size: clamp(8px, 1.3vw, 11px);
+            font-weight: 700;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 5px;
+        }
+
+        .game-meta {
+            font-size: 9px;
+            color: #444;
+            letter-spacing: 1px;
+        }
+
+        .game-badge {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 7px;
+            padding: 3px 7px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .badge-neo { background: rgba(232,162,74,0.15); color: var(--gold); border: 1px solid rgba(232,162,74,0.3); }
+        .badge-cps { background: rgba(230,57,70,0.15);  color: var(--red);  border: 1px solid rgba(230,57,70,0.3); }
+
+        /* SELECT BUTTON */
+        #launch-btn {
+            margin-top: 20px;
+            padding: 14px;
+            border: 1.5px solid var(--gold);
+            color: var(--gold);
+            background: transparent;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.2s, color 0.2s;
+            width: 100%;
+        }
+
+        #launch-btn:hover {
+            background: var(--gold);
+            color: #000;
+        }
+
+        #launch-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        /* ── EMULATOR SCREEN ── */
+        #emu-screen {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 100;
+        }
+
+        #game { width: 100vw; height: 100vh; }
+
+        /* BACK BUTTON */
+        #back-btn {
+            position: fixed;
+            top: 12px; left: 12px;
+            z-index: 200;
+            background: rgba(0,0,0,0.75);
+            border: 1px solid #333;
+            color: #888;
+            font-family: 'Orbitron', monospace;
+            font-size: 10px;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            letter-spacing: 1px;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        #back-btn:hover { color: var(--gold); border-color: var(--gold); }
+
+        /* OVERLAY */
+        #overlay {
+            position: fixed; inset: 0;
+            background: #0E0F13;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 150;
+        }
+        #overlay.hidden { display: none; }
+
+        .btn-start {
+            padding: 15px 30px;
+            border: 2px solid var(--gold);
+            color: var(--gold);
+            font-family: 'Press Start 2P', monospace;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        /* Selector highlight arrow */
+        .arrow-indicator {
+            color: var(--gold);
+            font-size: 10px;
+            animation: pulse 0.8s ease-in-out infinite alternate;
+        }
+        @keyframes pulse { from { opacity: 0.3; } to { opacity: 1; } }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            #preview-panel { width: 0; display: none; }
+            #divider { display: none; }
+            #selector-panel { padding: 24px 18px; }
         }
     </style>
 </head>
 <body>
 
-    <div id="overlay" onclick="startEmulator()">
-        <div id="status-container">
-            <div class="btn" id="btn-text">Cargando datos...</div>
-            <p style="font-size: 11px; margin-top: 15px; color: #666;">(Si tarda, pulsa aquí para forzar el inicio)</p>
+<!-- ═══════════════ MENÚ ═══════════════ -->
+<div id="menu">
+
+    <!-- IZQUIERDA: pantalla arcade -->
+    <div id="preview-panel">
+        <div class="cab-deco cab-top"></div>
+        <div class="cab-deco cab-bottom">
+            <div class="coin-slot"></div>
+            <div class="coin-slot"></div>
         </div>
+        <div class="cab-deco cab-left"></div>
+        <div class="cab-deco cab-right"></div>
+
+        <div id="screen-bg">
+            <img id="cover-img" src="" alt="cover" />
+        </div>
+        <div id="screen-glow"></div>
+        <div id="insert-coin">INSERT COIN</div>
     </div>
 
-    <div id="game"></div>
+    <div id="divider"></div>
 
-    <script type="text/javascript">
-        var r2 = 'https://pub-ba5ec238faea469894f40acba1e873db.r2.dev';
-        
-        window.EJS_player = '#game';
-        window.EJS_core = 'fbneo'; 
-        window.EJS_gameUrl = r2 + '/kof2002.zip';
-        window.EJS_biosUrl = r2 + '/neogeo.zip';
+    <!-- DERECHA: selector -->
+    <div id="selector-panel">
+        <div id="arcade-title">ARCADE</div>
+        <div id="arcade-sub">Select Your Game</div>
+
+        <div id="game-list">
+            <!-- Cards generadas por JS -->
+        </div>
+
+        <button id="launch-btn" onclick="launchSelected()">▶ LAUNCH GAME</button>
+    </div>
+</div>
+
+<!-- ═══════════════ EMULADOR ═══════════════ -->
+<div id="emu-screen">
+    <button id="back-btn" onclick="goBack()">← MENÚ</button>
+    <div id="overlay">
+        <div style="text-align:center">
+            <button class="btn-start" id="btn-text" onclick="startEmulator()">Cargando...</button>
+            <p style="font-size:10px;margin-top:14px;color:#444;font-family:sans-serif">Pulsa si tarda mucho</p>
+        </div>
+    </div>
+    <div id="game"></div>
+</div>
+
+<script>
+    // ─── CATÁLOGO DE JUEGOS ───
+    var r2 = 'https://pub-ba5ec238faea469894f40acba1e873db.r2.dev';
+
+    var GAMES = [
+        {
+            id: 'kof2002',
+            title: 'The King of Fighters 2002',
+            year: '2002',
+            system: 'NEO GEO',
+            badge: 'badge-neo',
+            core: 'fbneo',
+            rom: r2 + '/kof2002.zip',
+            bios: r2 + '/neogeo.zip',
+            // Portada oficial KOF2002 (CDN público)
+            cover: 'https://upload.wikimedia.org/wikipedia/en/3/3d/KOF2002_cover.jpg',
+            glowColor: 'rgba(232,162,74,0.25)',
+        },
+        {
+            id: 'mvc1',
+            title: 'Marvel vs. Capcom: Clash of Super Heroes',
+            year: '1998',
+            system: 'CPS-2',
+            badge: 'badge-cps',
+            core: 'fbneo',
+            rom: r2 + '/mvsc.zip',   // ← ajusta el nombre exacto de tu ROM
+            bios: null,
+            cover: 'https://upload.wikimedia.org/wikipedia/en/2/26/Marvel_vs._Capcom_-_Clash_of_Super_Heroes_flyer.jpg',
+            glowColor: 'rgba(230,57,70,0.25)',
+        },
+    ];
+
+    // ─── ESTADO ───
+    var selectedIndex = 0;
+    var emuLoaded = false;
+    var emuScript = null;
+
+    // ─── RENDER CARDS ───
+    function renderList() {
+        var list = document.getElementById('game-list');
+        list.innerHTML = '';
+        GAMES.forEach(function(g, i) {
+            var card = document.createElement('div');
+            card.className = 'game-card' + (i === selectedIndex ? ' active' : '');
+            card.innerHTML =
+                '<img class="game-thumb" src="' + g.cover + '" alt="' + g.title + '" onerror="this.style.opacity=0.1">' +
+                '<div class="game-info">' +
+                    '<div class="game-title">' + (i === selectedIndex ? '<span class="arrow-indicator">▶ </span>' : '') + g.title + '</div>' +
+                    '<div class="game-meta">' + g.system + ' · ' + g.year + '</div>' +
+                '</div>' +
+                '<span class="game-badge ' + g.badge + '">' + g.system + '</span>';
+            card.onclick = (function(idx) {
+                return function() { selectGame(idx); };
+            })(i);
+            list.appendChild(card);
+        });
+        updatePreview();
+    }
+
+    function selectGame(i) {
+        selectedIndex = i;
+        renderList();
+    }
+
+    function updatePreview() {
+        var g = GAMES[selectedIndex];
+        var img = document.getElementById('cover-img');
+        img.style.opacity = 0;
+        setTimeout(function() {
+            img.src = g.cover;
+            img.onload = function() { img.style.opacity = 1; };
+            img.onerror = function() { img.style.opacity = 0.05; };
+        }, 180);
+        document.getElementById('screen-glow').style.boxShadow =
+            'inset 0 0 60px ' + g.glowColor + ', 0 0 30px ' + g.glowColor;
+    }
+
+    // ─── LAUNCH ───
+    function launchSelected() {
+        var g = GAMES[selectedIndex];
+
+        // Limpiar emulador anterior si existía
+        if (emuScript) {
+            emuScript.remove();
+            emuScript = null;
+            emuLoaded = false;
+        }
+        var gameDiv = document.getElementById('game');
+        gameDiv.innerHTML = '';
+
+        // Config del emulador
+        window.EJS_player     = '#game';
+        window.EJS_core       = g.core;
+        window.EJS_gameUrl    = g.rom;
+        window.EJS_biosUrl    = g.bios || undefined;
         window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
         window.EJS_startOnLoaded = true;
-        window.EJS_language = 'en-US';
+        window.EJS_language   = 'en-US';
 
-        // CARGA DEL MOTOR
-        var ejs = document.createElement('script');
-        ejs.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
-        document.body.appendChild(ejs);
+        // Mostrar pantalla emulador
+        document.getElementById('menu').style.display = 'none';
+        document.getElementById('emu-screen').style.display = 'block';
+        document.getElementById('overlay').classList.remove('hidden');
+        document.getElementById('btn-text').textContent = 'Cargando ' + g.title + '...';
 
-        // --- ESTE ES EL SCRIPT DE "LIMPIEZA FORZADA" ---
-        // Se ejecuta cada segundo para verificar si el juego ya arrancó
-        setInterval(function() {
-            // 1. Buscamos cualquier capa que diga "Cargando" o "Splash"
-            var loader = document.getElementById('status') || 
-                         document.getElementById('overlay') || 
-                         document.getElementById('splash');
-            
-            // 2. Si detectamos que los controles de EmulatorJS ya aparecieron
-            // o si escuchas audio, borramos la capa de carga.
-            if (document.querySelector('.emulatorjs-controls') || document.querySelector('canvas')) {
-                if (loader) {
-                    loader.style.display = 'none';
-                    loader.style.opacity = '0';
-                    loader.style.pointerEvents = 'none'; // Para que no bloquee los clics
-                }
+        // Inyectar loader
+        emuScript = document.createElement('script');
+        emuScript.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+        document.body.appendChild(emuScript);
+
+        // Auto-hide overlay cuando cargue
+        var check = setInterval(function() {
+            if (document.querySelector('canvas')) {
+                document.getElementById('overlay').classList.add('hidden');
+                clearInterval(check);
             }
-        }, 1000);
+        }, 800);
+    }
 
-        // Forzar enfoque al hacer clic para activar controles y video
-        document.addEventListener('click', function() {
-            var canvas = document.querySelector('canvas');
-            if (canvas) canvas.focus();
+    function startEmulator() {
+        document.getElementById('overlay').classList.add('hidden');
+    }
+
+    function goBack() {
+        // Detener emulador
+        if (emuScript) { emuScript.remove(); emuScript = null; }
+        document.getElementById('game').innerHTML = '';
+
+        // Limpiar vars globales EJS
+        ['EJS_player','EJS_core','EJS_gameUrl','EJS_biosUrl','EJS_startOnLoaded'].forEach(function(k){
+            window[k] = undefined;
         });
-    </script>
+
+        document.getElementById('emu-screen').style.display = 'none';
+        document.getElementById('menu').style.display = 'flex';
+    }
+
+    // ─── TECLADO: navegar con flechas ───
+    document.addEventListener('keydown', function(e) {
+        if (document.getElementById('emu-screen').style.display === 'block') return;
+        if (e.key === 'ArrowDown') {
+            selectedIndex = (selectedIndex + 1) % GAMES.length;
+            renderList();
+        } else if (e.key === 'ArrowUp') {
+            selectedIndex = (selectedIndex - 1 + GAMES.length) % GAMES.length;
+            renderList();
+        } else if (e.key === 'Enter') {
+            launchSelected();
+        }
+    });
+
+    // ─── INIT ───
+    renderList();
+</script>
+
 </body>
 </html>
